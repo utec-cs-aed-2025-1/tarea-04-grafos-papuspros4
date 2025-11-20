@@ -3,9 +3,9 @@
 # Tarea de Grafos
 
 ## Integrantes: 
-- 1 ____   _____
-- 2 ____   _____
-- 3 ____   _____
+- 1 Adriana Lucia Castro Quiñones
+- 2 Benjamin Mario Augusto Suarez Arzapalo
+
 
 ## Objetivo: 
 El objetivo de esta tarea es implementar un **Path Finder** para la ciudad de Lima. 
