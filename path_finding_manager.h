@@ -37,6 +37,7 @@ enum Algorithm {
 //*
 class PathFindingManager {
     WindowManager *window_manager;
+    Graph *graph_ptr = nullptr;
     std::vector<sfLine> path;
     std::vector<sfLine> visited_edges;
 
@@ -218,6 +219,30 @@ class PathFindingManager {
     // En cada iteración de los algoritmos esta función es llamada para dibujar los cambios en el 'window_manager'
     void render() {
         sf::sleep(sf::milliseconds(10));
+
+        // Si hay un graph asociado, dibujar su estado y las aristas visitadas
+        window_manager->clear();
+        if (graph_ptr != nullptr) {
+            graph_ptr->draw();
+        }
+
+        // Dibujar las aristas visitadas hasta ahora
+        for (sfLine &line : visited_edges) {
+            line.draw(window_manager->get_window(), sf::RenderStates::Default);
+        }
+
+        // Dibujar el nodo inicial (verde)
+        if (src != nullptr) {
+            src->draw(window_manager->get_window());
+        }
+
+        // Dibujar el nodo final (celeste)
+        if (dest != nullptr) {
+            dest->draw(window_manager->get_window());
+        }
+
+        // Mostrar el frame actual
+        window_manager->display();
     }
 
     //* --- set_final_path ---
@@ -255,7 +280,28 @@ public:
         if (src == nullptr || dest == nullptr) {
             return;
         }
+        // Asociar grafo para renderizado intra-algoritmo
+        graph_ptr = &graph;
 
+        // Limpieza de estado visual previo
+        path.clear();
+        visited_edges.clear();
+
+        // Resetear colores/radio de todos los nodos
+        for (auto & [id, node] : graph.nodes) {
+            node->reset();
+        }
+        // Recolorear src y dest para que sean visibles
+        if (src) {
+            src->color = sf::Color::Green;
+            src->radius = 3.0f;
+        }
+        if (dest) {
+            dest->color = sf::Color::Cyan;
+            dest->radius = 3.0f;
+        }
+
+        // Ejecutar algoritmo seleccionado
         switch (algorithm) {
             case Dijkstra:
                 dijkstra(graph);
@@ -269,6 +315,9 @@ public:
             default:
                 break;
         }
+
+        // Desasociar grafo
+        graph_ptr = nullptr;
     }
 
     void reset() {
