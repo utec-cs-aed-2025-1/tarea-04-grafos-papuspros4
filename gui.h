@@ -90,6 +90,11 @@ public:
                                 path_finding_manager.reset();
                                 break;
                             }
+                            // B = Ejecutar Best First Search
+                            case sf::Keyboard::B: {
+                                path_finding_manager.exec(graph, BestFirstSearch);
+                                break;
+                            }
                             // E = Extra flag. Si es verdadero, hace un display de todos los 'edges'
                             //     visitados en la ejecución del último algoritmo.
                             case sf::Keyboard::E: {

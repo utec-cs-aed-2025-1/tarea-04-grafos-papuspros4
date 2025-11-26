@@ -10,12 +10,15 @@
 #include "graph.h"
 #include <unordered_map>
 #include <set>
-
+#include <queue>
+#include <limits>
+#include <cmath>
 
 // Este enum sirve para identificar el algoritmo que el usuario desea simular
 enum Algorithm {
     None,
     Dijkstra,
+    BestFirstSearch,
     AStar
 };
 
@@ -46,16 +49,167 @@ class PathFindingManager {
         }
     };
 
+    // Heurística: distancia euclidiana entre dos nodos
+    double heuristic(Node* a, Node* b) const {
+        double dx = a->coord.x - b->coord.x;
+        double dy = a->coord.y - b->coord.y;
+        return std::sqrt(dx * dx + dy * dy);
+    }
+
     void dijkstra(Graph &graph) {
+        std::unordered_map<Node *, double> distances;
+        std::unordered_map<Node *, bool> visited;
         std::unordered_map<Node *, Node *> parent;
-        // TODO: Add your code here
+        std::set<Entry> pq;
+
+        // Inicializar distancias a infinito
+        for (auto &[id, node] : graph.nodes) {
+            distances[node] = std::numeric_limits<double>::max();
+            visited[node] = false;
+        }
+
+        distances[src] = 0;
+        pq.insert({src, 0});
+
+        while (!pq.empty()) {
+            Entry current_entry = *pq.begin();
+            pq.erase(pq.begin());
+
+            Node *current = current_entry.node;
+
+            if (visited[current]) continue;
+            visited[current] = true;
+            current->color = sf::Color::Yellow;
+            render();
+
+            if (current == dest) break;
+
+            // Explorar vecinos
+            for (Edge *edge : current->edges) {
+                Node *neighbor = edge->dest;
+                if (edge->src != current) {
+                    neighbor = edge->src;
+                }
+
+                if (!visited[neighbor]) {
+                    double new_dist = distances[current] + edge->length;
+
+                    if (new_dist < distances[neighbor]) {
+                        distances[neighbor] = new_dist;
+                        parent[neighbor] = current;
+                        pq.insert({neighbor, new_dist});
+
+                        // Visualizar la arista explorada
+                        visited_edges.emplace_back(current->coord, neighbor->coord, sf::Color::Magenta, 1.0f);
+                    }
+                }
+            }
+        }
+
+        set_final_path(parent);
+    }
+
+    void best_first_search(Graph &graph) {
+        std::unordered_map<Node *, bool> visited;
+        std::unordered_map<Node *, Node *> parent;
+        std::set<Entry> pq;
+
+        // Inicializar visitados
+        for (auto &[id, node] : graph.nodes) {
+            visited[node] = false;
+        }
+
+        // Usar solo la heurística h(n) para ordenar
+        double h_src = heuristic(src, dest);
+        pq.insert({src, h_src});
+
+        while (!pq.empty()) {
+            Entry current_entry = *pq.begin();
+            pq.erase(pq.begin());
+
+            Node *current = current_entry.node;
+
+            if (visited[current]) continue;
+            visited[current] = true;
+            current->color = sf::Color::Yellow;
+            render();
+
+            if (current == dest) break;
+
+            // Explorar vecinos
+            for (Edge *edge : current->edges) {
+                Node *neighbor = edge->dest;
+                if (edge->src != current) {
+                    neighbor = edge->src;
+                }
+
+                if (!visited[neighbor]) {
+                    parent[neighbor] = current;
+                    double h_neighbor = heuristic(neighbor, dest);
+                    pq.insert({neighbor, h_neighbor});
+
+                    // Visualizar la arista explorada
+                    visited_edges.emplace_back(current->coord, neighbor->coord, sf::Color::Cyan, 1.0f);
+                }
+            }
+        }
 
         set_final_path(parent);
     }
 
     void a_star(Graph &graph) {
+        std::unordered_map<Node *, double> g_score;      // Costo real desde src
+        std::unordered_map<Node *, bool> closed_set;     // Visitados
         std::unordered_map<Node *, Node *> parent;
-        // TODO: Add your code here
+        std::set<Entry> open_set;
+
+        // Inicializar g_score
+        for (auto &[id, node] : graph.nodes) {
+            g_score[node] = std::numeric_limits<double>::max();
+            closed_set[node] = false;
+        }
+
+        g_score[src] = 0;
+        double h_src = heuristic(src, dest);
+        double f_src = h_src;
+        open_set.insert({src, f_src});
+
+        while (!open_set.empty()) {
+            Entry current_entry = *open_set.begin();
+            open_set.erase(open_set.begin());
+
+            Node *current = current_entry.node;
+
+            if (closed_set[current]) continue;
+            closed_set[current] = true;
+            current->color = sf::Color::Yellow;
+            render();
+
+            if (current == dest) break;
+
+            // Explorar vecinos
+            for (Edge *edge : current->edges) {
+                Node *neighbor = edge->dest;
+                if (edge->src != current) {
+                    neighbor = edge->src;
+                }
+
+                if (!closed_set[neighbor]) {
+                    double tentative_g = g_score[current] + edge->length;
+
+                    if (tentative_g < g_score[neighbor]) {
+                        parent[neighbor] = current;
+                        g_score[neighbor] = tentative_g;
+                        double h_neighbor = heuristic(neighbor, dest);
+                        double f_neighbor = tentative_g + h_neighbor;
+                        open_set.insert({neighbor, f_neighbor});
+
+                        // Visualizar la arista explorada
+                        visited_edges.emplace_back(current->coord, neighbor->coord, sf::Color::Green, 1.0f);
+                    }
+                }
+            }
+        }
 
         set_final_path(parent);
     }
@@ -64,7 +218,6 @@ class PathFindingManager {
     // En cada iteración de los algoritmos esta función es llamada para dibujar los cambios en el 'window_manager'
     void render() {
         sf::sleep(sf::milliseconds(10));
-        // TODO: Add your code here
     }
 
     //* --- set_final_path ---
@@ -85,7 +238,11 @@ class PathFindingManager {
     void set_final_path(std::unordered_map<Node *, Node *> &parent) {
         Node* current = dest;
 
-        // TODO: Add your code here
+        while (current != nullptr && parent.find(current) != parent.end()) {
+            Node* p = parent[current];
+            path.emplace_back(current->coord, p->coord, sf::Color::Red, 2.0f);
+            current = p;
+        }
     }
 
 public:
@@ -99,7 +256,19 @@ public:
             return;
         }
 
-        // TODO: Add your code here
+        switch (algorithm) {
+            case Dijkstra:
+                dijkstra(graph);
+                break;
+            case BestFirstSearch:
+                best_first_search(graph);
+                break;
+            case AStar:
+                a_star(graph);
+                break;
+            default:
+                break;
+        }
     }
 
     void reset() {
