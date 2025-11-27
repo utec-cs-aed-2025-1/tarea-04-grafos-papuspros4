@@ -1,9 +1,11 @@
+[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/5zgGDtf4)
+[![Open in Visual Studio Code](https://classroom.github.com/assets/open-in-vscode-2e0aaae1b6195c2367325f4f02e2d04e9abb55f0b24a779b69b11b9e10269abc.svg)](https://classroom.github.com/online_ide?assignment_repo_id=21627334&assignment_repo_type=AssignmentRepo)
 # Tarea de Grafos
 
 ## Integrantes: 
-- 1 ____   _____
-- 2 ____   _____
-- 3 ____   _____
+- 1 Adriana Lucia Castro Quiñones
+- 2 Benjamin Mario Augusto Suarez Arzapalo
+
 
 ## Objetivo: 
 El objetivo de esta tarea es implementar un **Path Finder** para la ciudad de Lima. 
@@ -66,5 +68,180 @@ Además:
 > **Créditos:** Juan Diego Castro Padilla [juan.castro.p@utec.edu.pe](mailto:juan.castro.p@utec.edu.pe)
 
 
+-----------
 
+# Análisis de Complejidad
 
+Este proyecto implementa tres algoritmos de búsqueda de caminos: Dijkstra, Greedy Best‑First (GBFS) y A*.
+El análisis siguiente está adaptado a la implementación presente en `path_finding_manager.h` (uso de
+`std::set` como cola priorizada, caché de heurística, y visualización intra‑algoritmo).
+
+## Resumen de estructuras relevantes
+- Grafo: `graph.nodes` (map de id → `Node*`), cada `Node` contiene su lista de `Edge*`.
+- Cola de prioridad: `std::set<Entry>` donde `Entry` contiene `Node*` y `double` (valor de ordenación);
+  el operador `<` incluye un tie‑break por `node->id` para evitar pérdidas por empates.
+- Heurística: distancia euclidiana; la implementación mantiene `heuristic_cache` precomputada por destino.
+- Visualización: `render()` dibuja el grafo y las aristas visitadas durante la ejecución (incluye un `sf::sleep`).
+
+## Complejidad por algoritmo (peor caso)
+
+### Dijkstra
+- Temporal: O((V + E) log V)
+  - Inicializa distancias en O(V).
+  - Cada extracción/inserción en la cola priorizada es O(log V).
+  - Cada arista se considera al menos una vez en la relajación (con costo amortizado por log V).
+- Espacial: O(V) (mapas de distancias/parent/visited, y la cola). Si se contabiliza la visualización, `visited_edges` puede crecer hasta O(E).
+
+### Greedy Best‑First (GBFS)
+- Temporal (peor caso): O((V + E) log V)
+  - Precomputa heurística en O(V) (una sola vez por ejecución).
+  - Usa la heurística h(n) para ordenar la cola; en el peor caso expande todos los nodos y aristas.
+- Espacial: O(V) (+O(E) si se cuentan las aristas visitadas visualizadas).
+
+### A*
+- Temporal (peor caso): O((V + E) log V)
+  - Mantiene `g_score` y utiliza f(n)=g(n)+h(n) en la cola; estructura de operaciones similar a Dijkstra.
+  - Con heurística admisible (euclidiana) suele explorar mucho menos nodos en la práctica.
+- Espacial: O(V) (g_score, parent, open/closed sets) y O(V) adicional para `heuristic_cache`.
+---
+
+## Análisis detallado por algoritmo 
+
+En esta sección se desglosa la complejidad de cada algoritmo según esta implementación concreta  
+(`std::set<Entry>` como cola de prioridad, heurística euclidiana cacheada y renderizado periódico del grafo).
+
+- `V` = número de nodos 
+- `E` = número de aristas
+- `timmer` = número de iteraciones entre llamadas a `render()`
+- `L` = número de aristas efectivamente relajadas/visitadas (en el peor caso `L ≈ E`)
+---
+
+# 1. Dijkstra
+
+### Inicialización
+- Recorrer `graph.nodes` para asignar distancias y visitados: \( O(V) \)  
+- Insertar `src` en el `set<Entry>`: \( O(\log V) \)
+
+**Total:**
+
+$$
+T_{\text{init}} = O(V)
+$$
+
+---
+
+### Bucle principal
+- Extraer el mejor nodo del `set`: a lo más \( V \) veces → \( O(V \log V) \)  
+- Examinar cada arista una vez; relajación exitosa implica *remove + insert*: \( O(E \log V) \)
+
+### Complejidad total sin render
+
+$$
+T_{\text{Dijkstra}} = O((V+E)\log V), \qquad S_{\text{Dijkstra}} = O(V)
+$$
+
+---
+
+### Costo del renderizado
+Cada `render()` cuesta:
+
+$$
+T_{\text{render}} = O(V+E)
+$$
+
+Número de llamadas:
+
+$$
+R \approx \left\lfloor \frac{L}{\text{timmer}} \right\rfloor + 1
+$$
+
+Costo total:
+
+$$
+T_{\text{render,total}} = 
+O\!\left(\frac{L}{\text{timmer}}(V+E)\right)
+$$
+
+Peor caso \( L \approx E \):
+
+$$
+T_{\text{render,total}} =
+O\!\left(\frac{E}{\text{timmer}}(V+E)\right)
+$$
+
+---
+
+# 2. A*
+
+A* mantiene:
+
+- `g_score[node]`
+- heurística \( h(n) \) cacheada  
+- \( f(n)=g(n)+h(n) \) en `Entry::dist`
+
+### Costes básicos
+- Inicialización: \( O(V) \)  
+- Extracción del mejor nodo: \( O(V \log V) \)  
+- Relajaciones: \( O(E \log V) \)  
+- Precálculo de heurística: \( O(V) \)
+
+### Complejidad sin render
+
+$$
+T_{\text{A*}} = O((V+E)\log V),\qquad S_{\text{A*}} = O(V)
+$$
+
+### Complejidad práctica
+
+$$
+T_{\text{A* práctico}} \approx O((V' + E')\log V)
+$$
+
+### Renderizado
+
+$$
+T_{\text{render,A*}} =
+O\!\left(\frac{E'}{\text{timmer}}(V+E)\right)
+$$
+
+---
+
+# 3. Greedy Best-First Search
+
+Best-First usa solo \( h(n) \) para priorizar la expansión.
+
+### Costes básicos
+- Inicialización: \( O(V) \)  
+- Extracción del mejor nodo: \( O(V \log V) \)  
+- Relajación por arista: \( O(E \log V) \)
+
+### Complejidad sin render
+
+$$
+T_{\text{BestFirst}} = O((V+E)\log V),\qquad S_{\text{BestFirst}} = O(V)
+$$
+
+### Renderizado
+
+$$
+T_{\text{render,BF}} =
+O\!\left(\frac{L}{\text{timmer}}(V+E)\right)
+$$
+
+---
+
+# 4. Comparación general
+
+### Peor caso teórico
+
+$$
+T_{\text{peor}} = O((V+E)\log V)
+$$
+
+### Diferencias prácticas
+- Dijkstra puede explorar casi todo el grafo.  
+- A* explora menos con buena heurística.  
+- Greedy Best-First es rápido pero no óptimo.  
+- Si `timmer` es pequeño, el renderizado puede dominar.  
+
+Link del video:  https://drive.google.com/drive/u/0/folders/1AAHilk_TooO3oyKecdyW6LFPdybmRRgw
