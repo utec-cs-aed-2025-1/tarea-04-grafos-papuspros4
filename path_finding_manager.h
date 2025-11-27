@@ -46,7 +46,16 @@ class PathFindingManager {
         double dist;
 
         bool operator < (const Entry& other) const {
-            return dist < other.dist;
+            // Uso de epsilon pequeño para evitar problemas de igualdad en punto flotante
+            const double eps = 1e-12;
+            if (std::fabs(dist - other.dist) > eps) {
+                return dist < other.dist;
+            }
+            // Rompe empates usando el ID del nodo
+            if (node != nullptr && other.node != nullptr) {
+                return node->id < other.node->id;
+            }
+            return node < other.node;
         }
     };
 
@@ -55,6 +64,18 @@ class PathFindingManager {
         double dx = a->coord.x - b->coord.x;
         double dy = a->coord.y - b->coord.y;
         return std::sqrt(dx * dx + dy * dy);
+    }
+
+    // Cache de heurística para el destino actual
+    std::unordered_map<Node*, double> heuristic_cache;
+
+    void compute_heuristic_cache(Graph &graph) {
+        heuristic_cache.clear();
+        if (dest == nullptr) return;
+        for (auto &p : graph.nodes) {
+            Node* node = p.second;
+            heuristic_cache[node] = heuristic(node, dest);
+        }
     }
 
     void dijkstra(Graph &graph) {
@@ -115,13 +136,16 @@ class PathFindingManager {
         std::unordered_map<Node *, Node *> parent;
         std::set<Entry> pq;
 
+        // Precalcular heurística para el destino
+        compute_heuristic_cache(graph);
+
         // Inicializar visitados
-        for (auto &[id, node] : graph.nodes) {
-            visited[node] = false;
+        for (auto &pr : graph.nodes) {
+            visited[pr.second] = false;
         }
 
-        // Usar solo la heurística h(n) para ordenar
-        double h_src = heuristic(src, dest);
+        // Arrancar con la heurística en src
+        double h_src = heuristic_cache.count(src) ? heuristic_cache[src] : heuristic(src, dest);
         pq.insert({src, h_src});
 
         while (!pq.empty()) {
@@ -146,7 +170,7 @@ class PathFindingManager {
 
                 if (!visited[neighbor]) {
                     parent[neighbor] = current;
-                    double h_neighbor = heuristic(neighbor, dest);
+                    double h_neighbor = heuristic_cache.count(neighbor) ? heuristic_cache[neighbor] : heuristic(neighbor, dest);
                     pq.insert({neighbor, h_neighbor});
 
                     // Visualizar la arista explorada
@@ -170,8 +194,11 @@ class PathFindingManager {
             closed_set[node] = false;
         }
 
+        // Precalcular heurística
+        compute_heuristic_cache(graph);
+
         g_score[src] = 0;
-        double h_src = heuristic(src, dest);
+        double h_src = heuristic_cache.count(src) ? heuristic_cache[src] : heuristic(src, dest);
         double f_src = h_src;
         open_set.insert({src, f_src});
 
@@ -201,7 +228,7 @@ class PathFindingManager {
                     if (tentative_g < g_score[neighbor]) {
                         parent[neighbor] = current;
                         g_score[neighbor] = tentative_g;
-                        double h_neighbor = heuristic(neighbor, dest);
+                        double h_neighbor = heuristic_cache.count(neighbor) ? heuristic_cache[neighbor] : heuristic(neighbor, dest);
                         double f_neighbor = tentative_g + h_neighbor;
                         open_set.insert({neighbor, f_neighbor});
 
@@ -261,13 +288,20 @@ class PathFindingManager {
     // Este path será utilizado para hacer el 'draw()' del 'path' entre 'src' y 'dest'.
     //*
     void set_final_path(std::unordered_map<Node *, Node *> &parent) {
-        Node* current = dest;
+        if (dest == nullptr) return;
+        if (parent.find(dest) == parent.end()) return;
 
+        std::vector<sfLine> tmp;
+        Node* current = dest;
         while (current != nullptr && parent.find(current) != parent.end()) {
             Node* p = parent[current];
-            path.emplace_back(current->coord, p->coord, sf::Color::Red, 2.0f);
+            tmp.emplace_back(p->coord, current->coord, sf::Color::Red, 2.0f);
             current = p;
         }
+
+        // Invertir para que 'path' vaya de src -> dest
+        std::reverse(tmp.begin(), tmp.end());
+        path = std::move(tmp);
     }
 
 public:
