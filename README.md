@@ -68,5 +68,43 @@ Además:
 > **Créditos:** Juan Diego Castro Padilla [juan.castro.p@utec.edu.pe](mailto:juan.castro.p@utec.edu.pe)
 
 
+-----------
+
+# Análisis de Complejidad
+
+Este proyecto implementa tres algoritmos de búsqueda de caminos: Dijkstra, Greedy Best‑First (GBFS) y A*.
+El análisis siguiente está adaptado a la implementación presente en `path_finding_manager.h` (uso de
+`std::set` como cola priorizada, caché de heurística, y visualización intra‑algoritmo).
+
+## Resumen de estructuras relevantes
+- Grafo: `graph.nodes` (map de id → `Node*`), cada `Node` contiene su lista de `Edge*`.
+- Cola de prioridad: `std::set<Entry>` donde `Entry` contiene `Node*` y `double` (valor de ordenación);
+  el operador `<` incluye un tie‑break por `node->id` para evitar pérdidas por empates.
+- Heurística: distancia euclidiana; la implementación mantiene `heuristic_cache` precomputada por destino.
+- Visualización: `render()` dibuja el grafo y las aristas visitadas durante la ejecución (incluye un `sf::sleep`).
+
+## Complejidad por algoritmo (peor caso)
+
+### Dijkstra
+- Temporal: O((V + E) log V)
+  - Inicializa distancias en O(V).
+  - Cada extracción/inserción en la cola priorizada es O(log V).
+  - Cada arista se considera al menos una vez en la relajación (con costo amortizado por log V).
+- Espacial: O(V) (mapas de distancias/parent/visited, y la cola). Si se contabiliza la visualización, `visited_edges` puede crecer hasta O(E).
+
+### Greedy Best‑First (GBFS)
+- Temporal (peor caso): O((V + E) log V)
+  - Precomputa heurística en O(V) (una sola vez por ejecución).
+  - Usa la heurística h(n) para ordenar la cola; en el peor caso expande todos los nodos y aristas.
+- Espacial: O(V) (+O(E) si se cuentan las aristas visitadas visualizadas).
+
+### A*
+- Temporal (peor caso): O((V + E) log V)
+  - Mantiene `g_score` y utiliza f(n)=g(n)+h(n) en la cola; estructura de operaciones similar a Dijkstra.
+  - Con heurística admisible (euclidiana) suele explorar mucho menos nodos en la práctica.
+- Espacial: O(V) (g_score, parent, open/closed sets) y O(V) adicional para `heuristic_cache`.
+
+
+
 
 
