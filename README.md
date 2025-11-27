@@ -107,136 +107,138 @@ El análisis siguiente está adaptado a la implementación presente en `path_fin
 
 ## Análisis detallado por algoritmo (implementación propia)
 
-En esta sección se desglosa con más detalle la complejidad de cada algoritmo según **esta implementación concreta**  
+En esta sección se desglosa la complejidad de cada algoritmo según esta implementación concreta  
 (`std::set<Entry>` como cola de prioridad, heurística euclidiana cacheada y renderizado periódico del grafo).
 
 Sea:
-- \( V = |\,\text{nodos}\,| \)
-- \( E = |\,\text{aristas}\,| \)
-- \( \text{timmer} \) el número de iteraciones entre llamadas a `render()`
-- \( L \) la cantidad de aristas efectivamente relajadas/visitadas por el algoritmo (en el peor caso \( L \approx E \))
 
-### 1. Dijkstra
+- \( V = |\text{nodos}| \)  
+- \( E = |\text{aristas}| \)  
+- `timmer`: número de iteraciones entre llamadas a `render()`  
+- \( L \): número de aristas efectivamente relajadas/visitadas (en el peor caso \( L \approx E \))
 
-**Inicialización**
-- Se recorre `graph.nodes` para asignar distancias y visitados: coste \( O(V) \).
-- Cada inserción inicial en la cola (`set<Entry>`) cuesta \( O(\log V) \), pero se hace una sola vez para `src`.
+---
+
+## 1. Dijkstra
+
+### **Inicialización**
+- Recorrer `graph.nodes` para asignar distancias y visitados: \( O(V) \)  
+- Insertar `src` en el `set<Entry>`: \( O(\log V) \)
+
+**Total:**
 
 \[
 T_{\text{init}} = O(V)
 \]
 
-**Bucle principal y relajación**
-- Cada extracción del mejor nodo (`pq.begin()`) cuesta \( O(\log V) \) y ocurre como máximo \( V \) veces.  
-  \[
-  T_{\text{extraer}} = O(V \log V)
-  \]
-- Cada arista de cada nodo se examina a lo más una vez; para cada relajación exitosa se hace
-  `remove_old_entries` + `insert` en el `set`, ambos \( O(\log V) \).
-  \[
-  T_{\text{relajar}} = O(E \log V)
-  \]
+### **Bucle principal**
+- Extraer el mejor nodo del set: como máximo \( V \) veces, costo \( O(V \log V) \)
+- Examinar cada arista una vez; relajación exitosa → remove + insert: \( O(E \log V) \)
 
-**Complejidad total (sin render)**
+### **Complejidad total (sin render)**
+
 \[
-T_{\text{Dijkstra}} = O\big((V + E)\,\log V\big), \qquad
+T_{\text{Dijkstra}} = O((V+E)\log V),\qquad
 S_{\text{Dijkstra}} = O(V)
 \]
 
-**Costo adicional por renderizado**
+### **Costo del renderizado**
 
-Cada llamada a `render()` vuelve a dibujar grafo y líneas visitadas, coste aproximado:
+Cada `render()` cuesta:
+
 \[
-T_{\text{render}} = O(V + E)
+T_{\text{render}} = O(V+E)
 \]
 
-Si se llaman \( R \) veces a `render()` durante la ejecución, donde
+Si se llama \( R \) veces:
+
 \[
-R \approx \left\lfloor \frac{L}{\text{timmer}} \right\rfloor + 1,
-\]
-el coste extra es:
-\[
-T_{\text{render, total}} = O\!\left(\frac{L}{\text{timmer}} (V + E)\right)
+R \approx \left\lfloor \frac{L}{\text{timmer}} \right\rfloor + 1
 \]
 
-En el peor caso \( L \approx E \):
+Costo total:
+
 \[
-T_{\text{render, total}} = O\!\left(\frac{E}{\text{timmer}} (V + E)\right)
+T_{\text{render,total}} = O\left(\frac{L}{\text{timmer}}(V+E)\right)
 \]
 
-### 2. A*
+Peor caso \( L \approx E \):
 
-En esta implementación A* mantiene:
-- `g_score[node]` (costo real desde `src`)
-- heurística \( h(n) \) cacheada (`heuristic_cache`)
-- valor \( f(n) = g(n) + h(n) \) en la clave `Entry::dist`.
-
-**Costes básicos**
-- Inicialización de `g_score` y `closed_set`: \( O(V) \).
-- Cada extracción del mejor nodo de `open_set` cuesta \( O(\log V) \), de nuevo hasta \( V \) veces.
-- Cada arista puede provocar una mejora de `g_score` y un nuevo `insert` en el `set`: \( O(E \log V) \).
-- La heurística se precalcula en `compute_heuristic_cache` con un recorrido sobre todos los nodos:
-  \[
-  T_{\text{heurística}} = O(V)
-  \]
-
-**Complejidad sin render**
 \[
-T_{\text{A*}} = O\big((V + E)\,\log V\big), \qquad
+T_{\text{render,total}} = O\left(\frac{E}{\text{timmer}}(V+E)\right)
+\]
+
+---
+
+## 2. A*
+
+A* mantiene:
+- `g_score[node]`
+- heurística \( h(n) \) cacheada
+- \( f(n)=g(n)+h(n) \) en `Entry::dist`
+
+### **Costes básicos**
+- Inicialización: \( O(V) \)  
+- Extraer mejor nodo: \( O(V \log V) \)  
+- Relajaciones: \( O(E \log V) \)  
+- Precálculo de heurística: \( O(V) \)
+
+### **Complejidad sin render**
+
+\[
+T_{\text{A*}} = O((V+E)\log V),\qquad
 S_{\text{A*}} = O(V)
 \]
 
-En la práctica, con heurística euclidiana admisible, se exploran menos nodos
-\( V' \ll V \), aristas \( E' \ll E \) y el coste efectivo es:
+### **Complejidad práctica**
+
 \[
-T_{\text{A* práctico}} \approx O\big((V' + E') \log V\big)
+T_{\text{A* práctico}} \approx O((V' + E')\log V)
 \]
 
-**Renderizado en A\***
+### **Renderizado**
 
-La fórmula es análoga a Dijkstra, pero usando \( E' \) (aristas realmente exploradas):
 \[
-T_{\text{render, A*}} = O\!\left(\frac{E'}{\text{timmer}} (V + E)\right)
+T_{\text{render,A*}} = O\left(\frac{E'}{\text{timmer}}(V+E)\right)
 \]
 
-### 3. Greedy Best‑First Search
+---
 
-Best‑First usa **solo la heurística** \( h(n) \) para priorizar la expansión (no acumula costo real),
-por lo que no garantiza óptimo pero tiende a avanzar muy rápido hacia el destino.
+## 3. Greedy Best-First Search
 
-**Costes básicos**
-- Inicialización de estructuras (`visited`, `parent`) y cola de prioridad con `src`: \( O(V) \).
-- Cada extracción de la cola (`set<Entry>`) cuesta \( O(\log V) \); en el peor caso \( O(V \log V) \).
-- Cada arista se examina a lo más una vez; por cada vecino no visitado se inserta en la cola con
-  su heurística:
-  \[
-  T_{\text{relajar}} = O(E \log V)
-  \]
+Best-First usa solo \( h(n) \) para priorizar la expansión.
 
-**Complejidad sin render**
+### **Costes básicos**
+- Inicialización: \( O(V) \)  
+- Extracción del mejor nodo: \( O(V \log V) \)  
+- Relajación por arista: \( O(E \log V) \)
+
+### **Complejidad sin render**
+
 \[
-T_{\text{BestFirst}} = O\big((V + E)\,\log V\big), \qquad
+T_{\text{BestFirst}} = O((V+E)\log V),\qquad
 S_{\text{BestFirst}} = O(V)
 \]
 
-**Renderizado**
+### **Renderizado**
 
-De nuevo, si \( L \) es el número de aristas realmente exploradas:
 \[
-T_{\text{render, BF}} = O\!\left(\frac{L}{\text{timmer}} (V + E)\right)
+T_{\text{render,BF}} = O\left(\frac{L}{\text{timmer}}(V+E)\right)
 \]
 
-### 4. Comparación general
+---
 
-En el peor caso teórico, los tres algoritmos comparten el mismo orden asintótico:
+## 4. Comparación general
+
+Peor caso teórico:
+
 \[
-T_{\text{peor}} = O\big((V + E)\,\log V\big)
+T_{\text{peor}} = O((V+E)\log V)
 \]
 
-La diferencia real aparece en **cuántos nodos y aristas explora cada uno**:
-- Dijkstra puede recorrer casi todo el grafo antes de llegar al destino.
-- A* reduce el número de expansiones cuando la heurística es buena (\( V', E' \ll V, E \)).
-- Greedy Best‑First suele ser el más rápido en exploración, pero puede desviarse de la ruta óptima.
+Diferencias prácticas:
 
-Cuando el grafo es grande y `render()` se llama a menudo (timmer pequeño),
-el término de renderizado puede llegar a dominar el tiempo total de ejecución.
+- **Dijkstra** puede explorar casi todo el grafo.  
+- **A\*** explora menos con buena heurística.  
+- **Greedy Best-First** es rápido pero no óptimo.  
+- Si `timmer` es pequeño, el renderizado puede dominar.
