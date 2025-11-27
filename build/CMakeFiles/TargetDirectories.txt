@@ -1,3 +1,0 @@
-/Users/lucia_nyx/tarea-04-grafos-papuspros4/build/CMakeFiles/homework_graph.dir
-/Users/lucia_nyx/tarea-04-grafos-papuspros4/build/CMakeFiles/edit_cache.dir
-/Users/lucia_nyx/tarea-04-grafos-papuspros4/build/CMakeFiles/rebuild_cache.dir
