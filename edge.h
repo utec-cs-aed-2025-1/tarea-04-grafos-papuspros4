@@ -122,7 +122,24 @@ struct Edge {
             file.getline(lanes, 3, '\n');
 
             if (file.eof()) {
+                delete[] src;
+                delete[] dest;
+                delete[] max_speed;
+                delete[] length;
+                delete[] oneway;
+                delete[] lanes;
                 break;
+            }
+
+            // Evitar excepciones si la línea está vacía o malformada
+            if (src[0] == '\0' || dest[0] == '\0') {
+                delete[] src;
+                delete[] dest;
+                delete[] max_speed;
+                delete[] length;
+                delete[] oneway;
+                delete[] lanes;
+                continue;
             }
 
             std::size_t src_id = static_cast<size_t>(std::stoll(src));
@@ -143,6 +160,7 @@ struct Edge {
 
             delete[] src;
             delete[] dest;
+            delete[] max_speed;
             delete[] oneway;
             delete[] length;
             delete[] lanes;

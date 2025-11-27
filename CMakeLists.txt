@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.27)
 project(homework_graph)
 
 set(CMAKE_CXX_STANDARD 17)
+set(SFML_DIR "C:/msys64/mingw64/lib/cmake/SFML")
 
 add_executable(${PROJECT_NAME} main.cpp
         graph.h

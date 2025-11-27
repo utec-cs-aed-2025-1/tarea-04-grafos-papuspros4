@@ -64,7 +64,18 @@ struct Node {
             file.getline(x, 15, '\n');
 
             if (file.eof()) {
+                delete[] id;
+                delete[] y;
+                delete[] x;
                 break;
+            }
+
+            // Evitar lanzar excepciones si la línea está vacía o malformada
+            if (id[0] == '\0') {
+                delete[] id;
+                delete[] y;
+                delete[] x;
+                continue;
             }
 
             std::size_t identifier = static_cast<size_t>(std::stoll(id));

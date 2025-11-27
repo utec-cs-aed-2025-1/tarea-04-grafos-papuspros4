@@ -5,12 +5,14 @@
 #ifndef HOMEWORK_GRAPH_GUI_H
 #define HOMEWORK_GRAPH_GUI_H
 
-
 #include "window_manager.h"
 #include "path_finding_manager.h"
-
 #include <cmath>
 #include <functional>
+#include <map>
+#include <limits>
+
+using namespace std;
 
 
 class GUI {
@@ -19,22 +21,19 @@ class GUI {
 
     Graph graph;
 
-    // 1NN es un algoritmo muy popular que retorna el 1 Nearest Neighbour (de ahí el nombre 1NN), o vecino más cercano
-    // de una coleccion de elementos a una query dada.
-    // En este caso, nos interesa conocer cuál es el nodo mas cercano al punto 'query' pasado como parámetro.
-    static Node *_1NN(std::map<std::size_t, Node *> &nodes, sf::Vector2i query) {
+    // Búsqueda optimizada del nodo más cercano (1NN)
+    static Node *_1NN(map<size_t, Node *> &nodes, sf::Vector2i query) {
         Node *nearest = nullptr;
-        double min_dist = std::numeric_limits<double>::max();
-        std::function<double(sf::Vector2f)> euclidean = [&](sf::Vector2f point) {
-            return std::sqrt(
-                    std::pow((point.x - (double) query.x), 2) + std::pow((point.y - (double) query.y), 2)
-            );
-        };
+        double min_dist_sq = numeric_limits<double>::max();
+        double qx = static_cast<double>(query.x);
+        double qy = static_cast<double>(query.y);
 
         for (auto &[_, node]: nodes) {
-            double dist = euclidean(node->coord);
-            if (dist < min_dist) {
-                min_dist = dist;
+            double dx = node->coord.x - qx;
+            double dy = node->coord.y - qy;
+            double dist_sq = dx * dx + dy * dy;
+            if (dist_sq < min_dist_sq) {
+                min_dist_sq = dist_sq;
                 nearest = node;
             }
         }
@@ -44,7 +43,7 @@ class GUI {
 
 public:
 
-    explicit GUI(const std::string &nodes_path, const std::string &edges_path)
+    explicit GUI(const string &nodes_path, const string &edges_path)
             : path_finding_manager(&window_manager), graph(&window_manager) {
         // Parsea los nodos y aristas leyendolos a partir del csv
         graph.parse_csv(nodes_path, edges_path);
