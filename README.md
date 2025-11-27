@@ -110,13 +110,10 @@ El análisis siguiente está adaptado a la implementación presente en `path_fin
 En esta sección se desglosa la complejidad de cada algoritmo según esta implementación concreta  
 (`std::set<Entry>` como cola de prioridad, heurística euclidiana cacheada y renderizado periódico del grafo).
 
-Sea:
-
-- \( V = |\text{nodos}| \)  
-- \( E = |\text{aristas}| \)  
-- **timmer**: número de iteraciones entre llamadas a `render()`  
-- \( L \): número de aristas efectivamente relajadas/visitadas (en el peor caso \( L \approx E \))
-
+- `V` = número de nodos 
+- `E` = número de aristas
+- `timmer` = número de iteraciones entre llamadas a `render()`
+- `L` = número de aristas efectivamente relajadas/visitadas (en el peor caso `L ≈ E`)
 ---
 
 # 1. Dijkstra
@@ -246,3 +243,5 @@ $$
 - A* explora menos con buena heurística.  
 - Greedy Best-First es rápido pero no óptimo.  
 - Si `timmer` es pequeño, el renderizado puede dominar.  
+
+Link del video:  https://drive.google.com/drive/u/0/folders/1AAHilk_TooO3oyKecdyW6LFPdybmRRgw
